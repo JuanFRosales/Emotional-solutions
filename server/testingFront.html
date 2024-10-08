@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Image Upload</title>
+    <style>
+        video, canvas {
+            display: block;
+            margin: 20px auto;
+            width: 100%;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Capture Image from Webcam</h1>
+    <video id="video" autoplay></video>
+    <button id="capture">Capture Image</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <button id="upload" style="display:none;">Upload Image</button>
+    <div id="response"></div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const uploadButton = document.getElementById('upload');
+        let capturedImage;
+
+        // Access the webcam
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((err) => {
+                console.error('Error accessing webcam:', err);
+            });
+
+        // Capture the image
+        document.getElementById('capture').addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+            capturedImage = canvas.toDataURL('image/png');
+            uploadButton.style.display = 'inline-block'; // Show upload button
+        });
+
+        // Upload the image
+        uploadButton.addEventListener('click', async () => {
+            const blob = await fetch(capturedImage).then(res => res.blob());
+            const formData = new FormData();
+            formData.append('image', blob, 'capturedImage.png');
+
+            try {
+                const response = await fetch('http://localhost:3030/api/images/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+                document.getElementById('response').innerText = result.message;
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                document.getElementById('response').innerText = 'Error uploading image.';
+            }
+        });
+    </script>
+</body>
+</html>
